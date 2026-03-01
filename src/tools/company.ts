@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { wintClient } from "../auth/client.js";
-import { WintTool, formatResult, formatError } from "./types.js";
+import { WintTool, paginationSchema, formatResult, formatError } from "./types.js";
 import { sanitizePathParam } from "../security.js";
 
 export const companyTools: WintTool[] = [
@@ -41,6 +41,52 @@ export const companyTools: WintTool[] = [
     handler: async (args) => {
       try {
         const result = await wintClient.post("/api/Company/Selected", { CompanyId: args.companyId });
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "global_search",
+    description:
+      "Search across all Wint modules — invoices, incoming invoices, receipts, customers, suppliers, persons, articles, etc. Returns mixed results from all modules.",
+    schema: {
+      SearchStr: z.string().describe("Search string"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/Search", { SearchStr: args.SearchStr });
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "employee_list",
+    description: "List all employees in the current company. Returns person IDs, names, email, and employment details.",
+    schema: {
+      ...paginationSchema,
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/Employees", args);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "employee_get",
+    description: "Get full details of a specific employee by ID.",
+    schema: {
+      id: z.number().describe("Employee ID (integer)"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get(`/api/Employees/${sanitizePathParam(args.id)}`);
         return formatResult(result);
       } catch (error) {
         return formatError(error);

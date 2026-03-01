@@ -162,6 +162,26 @@ export const salaryTools: WintTool[] = [
     },
   },
   {
+    name: "salary_approve",
+    description:
+      "Approve salaries for a specific period. Approves all employees or a subset by person IDs. This is the final action after reviewing salary reports.",
+    schema: {
+      YearAndMonth: z.number().describe("Period to approve as YYYYMM integer (e.g. 202501)"),
+      PersonIds: z.array(z.number()).optional().describe("Specific person IDs to approve. If omitted, approves all."),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.post("/api/WintSalary/Approve", {
+          YearAndMonth: args.YearAndMonth,
+          PersonIds: args.PersonIds,
+        });
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
     name: "salary_deviation_list",
     description: "List salary deviations (variable pay, bonuses, absences) for a given month.",
     schema: {

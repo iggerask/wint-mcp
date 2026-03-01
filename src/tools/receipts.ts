@@ -146,4 +146,30 @@ export const receiptTools: WintTool[] = [
       }
     },
   },
+  {
+    name: "receipt_categories",
+    description: "List available receipt categories. Use these IDs when creating or filtering receipts by ReceiptCategoryId.",
+    schema: {},
+    handler: async () => {
+      try {
+        const result = await wintClient.get("/api/ReceiptCategory");
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "receipt_payment_methods",
+    description: "List available receipt payment methods (cash, card, WintCard, etc.). Use these IDs when creating receipts with PaymentMethodId.",
+    schema: {},
+    handler: async () => {
+      try {
+        const result = await wintClient.get("/api/ReceiptPaymentMethod");
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
 ];

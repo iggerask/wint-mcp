@@ -120,6 +120,81 @@ export const accountingTools: WintTool[] = [
     },
   },
   {
+    name: "voucher_create",
+    description:
+      "Create a new accounting voucher with transactions. Each transaction is a debit or credit line on an account. The sum of all transaction amounts must equal zero (balanced).",
+    schema: {
+      BookingDate: z.string().describe("Booking date (ISO 8601, e.g. 2026-01-15)"),
+      SeriesId: z.string().describe("Voucher series ID (UUID)"),
+      Text: z.string().optional().describe("Voucher description/text"),
+      Transactions: z
+        .array(z.record(z.string(), z.any()))
+        .describe(
+          "Array of transaction lines. Each: {AccountNumber (int), Amount (decimal, positive=debit negative=credit), Text (string), DimensionItemId (uuid, optional)}",
+        ),
+      Images: z.array(z.string()).optional().describe("Array of uploaded file IDs to attach"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.post("/api/Voucher", {
+          BookingDate: args.BookingDate,
+          SeriesId: args.SeriesId,
+          ValidateLockedSystemAccounts: true,
+          Text: args.Text,
+          Transactions: args.Transactions,
+          Images: args.Images,
+        });
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "dimension_list",
+    description:
+      "List accounting dimensions (cost centers, projects). Dimensions are used to tag transactions for reporting. Filter by type or compatibility.",
+    schema: {
+      ...paginationSchema,
+      TypeId: z.string().optional().describe("Dimension type ID (UUID) to filter by"),
+      CompatibilityType: z
+        .number()
+        .optional()
+        .describe("Filter by compatibility type: 0 = CostCenter, 1 = Project"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/Dimension", args);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "dimension_create",
+    description: "Create a new accounting dimension (cost center or project).",
+    schema: {
+      DimensionTypeId: z.string().describe("Dimension type ID (UUID) — get from dimension_list"),
+      Name: z.string().describe("Dimension name"),
+      ShortName: z.string().optional().describe("Short name / code"),
+      Active: z.boolean().describe("Whether the dimension is active"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.post("/api/Dimension", {
+          DimensionTypeId: args.DimensionTypeId,
+          Name: args.Name,
+          ShortName: args.ShortName,
+          Active: args.Active,
+        });
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
     name: "transaction_list",
     description:
       "List booked accounting transactions with date and account filtering. Useful for seeing exactly what has been booked to specific accounts in a period. Supports account ranges like '4000<4999' or '5000<6999-5410' (include range, exclude account).",

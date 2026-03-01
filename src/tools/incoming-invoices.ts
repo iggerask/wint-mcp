@@ -91,6 +91,78 @@ export const incomingInvoiceTools: WintTool[] = [
     },
   },
   {
+    name: "incoming_invoice_create",
+    description:
+      "Create a new incoming (supplier) invoice manually. Provide invoice data including TotalAmount, Tax, supplier payment details (BGNumber, PGNumber, or IBAN), OrgNr, and optionally Attachments.",
+    schema: {
+      invoice: z.record(z.string(), z.any()).describe("Incoming invoice object with TotalAmount, Tax, BGNumber/PGNumber/IBAN, OrgNr, etc."),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.post("/api/IncomingInvoice", args.invoice);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "incoming_invoice_send_to_person",
+    description:
+      "Route an incoming invoice to a specific person for review or approval. Used to delegate invoice handling.",
+    schema: {
+      id: z.number().describe("Incoming invoice ID (integer)"),
+      action: z.record(z.string(), z.any()).describe("Send-to-person action object (e.g. {PersonId: 123})"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.post(
+          `/api/IncomingInvoice/SendToPerson/${sanitizePathParam(args.id)}`,
+          args.action,
+        );
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "incoming_invoice_supplier_list",
+    description:
+      "List known suppliers for incoming invoices. Returns supplier name, invoice count, amounts, and whether they have automation rules. Supports filtering and pagination.",
+    schema: {
+      ...paginationSchema,
+      Name: z.string().optional().describe("Filter by supplier name"),
+      HasRules: z.boolean().optional().describe("Filter suppliers that have automation rules"),
+      HasUnpaidInvoices: z.boolean().optional().describe("Filter suppliers with unpaid invoices"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/IncomingInvoice/Suppliers", args);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "incoming_invoice_supplier_get",
+    description: "Get details of a specific incoming invoice supplier by ID.",
+    schema: {
+      supplierId: z.number().describe("Supplier ID (integer)"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get(
+          `/api/IncomingInvoice/Suppliers/${sanitizePathParam(args.supplierId)}`,
+        );
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
     name: "incoming_invoice_cancel",
     description: "Cancel an incoming invoice. Removes it from the approval flow.",
     schema: {
