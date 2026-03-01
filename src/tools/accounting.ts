@@ -63,8 +63,35 @@ export const accountingTools: WintTool[] = [
     },
   },
   {
+    name: "monthly_result_report",
+    description:
+      "Get a monthly P&L / income statement (resultaträkning) broken down by account and month. Returns booked amounts per account per month for the given period. This is the best tool for understanding revenue and costs over time.",
+    schema: {
+      startYear: z.number().describe("Start year (e.g. 2025)"),
+      startMonth: z.number().min(1).max(12).describe("Start month (1-12)"),
+      endYear: z.number().describe("End year (e.g. 2026)"),
+      endMonth: z.number().min(1).max(12).describe("End month (1-12)"),
+      dimensions: z
+        .array(z.string())
+        .optional()
+        .describe("Optional dimension IDs (UUIDs) to filter by"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.post("/api/FinancialReports/MonthlyResultReport", {
+          StartMonth: { Year: args.startYear, Month: args.startMonth },
+          EndMonth: { Year: args.endYear, Month: args.endMonth },
+          Dimensions: args.dimensions ?? null,
+        });
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
     name: "financial_report_result",
-    description: "Generate an income statement (resultaträkning). Provide reportParams with FromDate, ToDate, FinancialYearId, IncludeInactiveAccounts, Dimensions.",
+    description: "Generate an income statement (resultaträkning). Provide reportParams with Columns (array of {StartMonth: {Year, Month}, EndMonth: {Year, Month}}), Dimensions.",
     schema: {
       reportParams: z.record(z.string(), z.any()).describe("Report parameters object"),
     },
@@ -86,6 +113,29 @@ export const accountingTools: WintTool[] = [
     handler: async (args) => {
       try {
         const result = await wintClient.post("/api/FinancialReports/BalanceReport", args.reportParams);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "transaction_list",
+    description:
+      "List booked accounting transactions with date and account filtering. Useful for seeing exactly what has been booked to specific accounts in a period. Supports account ranges like '4000<4999' or '5000<6999-5410' (include range, exclude account).",
+    schema: {
+      ...paginationSchema,
+      BookingDateStart: z.string().optional().describe("Start of booking date range (ISO 8601, e.g. 2025-12-01)"),
+      BookingDateEnd: z.string().optional().describe("End of booking date range (ISO 8601, e.g. 2026-02-28)"),
+      AccountStart: z.number().optional().describe("Start of account number range (e.g. 4000)"),
+      AccountEnd: z.number().optional().describe("End of account number range (e.g. 4999)"),
+      AccountRange: z.string().optional().describe("Account range expression (e.g. '4000<4999,5000<6999-5410')"),
+      MinAmount: z.number().optional().describe("Minimum transaction amount"),
+      MaxAmount: z.number().optional().describe("Maximum transaction amount"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/Transaction", args);
         return formatResult(result);
       } catch (error) {
         return formatError(error);

@@ -6,9 +6,17 @@ import { sanitizePathParam } from "../security.js";
 export const receiptTools: WintTool[] = [
   {
     name: "receipt_list",
-    description: "List receipts (expense reports) with pagination. Returns receipt status, amounts, and supplier info. Receipt states: 0 = Draft, 1 = Created, 2 = Sent, 3 = AwaitingApproval, 5 = Approved, 6 = Paid, 7 = Cancelled, 8 = SentBack, 10 = ClassifiedWintCard. States may vary — use receipt_get to check exact values.",
+    description:
+      "List receipts (expense reports) with date filtering and pagination. Receipt states: 0 = Draft, 1 = Created, 2 = Sent, 3 = AwaitingApproval, 5 = Approved, 6 = Paid, 7 = Cancelled, 8 = SentBack, 10 = ClassifiedWintCard.",
     schema: {
       ...paginationSchema,
+      CreatedFromDate: z.string().optional().describe("Include receipts created on or after this date (ISO 8601, e.g. 2025-12-01)"),
+      CreatedToDate: z.string().optional().describe("Include receipts created on or before this date (ISO 8601, e.g. 2026-02-28)"),
+      State: z.number().optional().describe("Filter by single state"),
+      States: z.array(z.number()).optional().describe("Filter by multiple states"),
+      Currency: z.string().optional().describe("Filter by currency code (e.g. SEK, EUR)"),
+      AmountFrom: z.number().optional().describe("Minimum amount"),
+      AmountTo: z.number().optional().describe("Maximum amount"),
     },
     handler: async (args) => {
       try {

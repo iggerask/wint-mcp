@@ -6,9 +6,19 @@ import { sanitizePathParam } from "../security.js";
 export const incomingInvoiceTools: WintTool[] = [
   {
     name: "incoming_invoice_list",
-    description: "List incoming (supplier) invoices with filtering and pagination. Returns invoices pending approval, certified, paid, etc.",
+    description:
+      "List incoming (supplier) invoices with filtering, date ranges, and pagination. Returns invoices pending approval, certified, paid, etc.",
     schema: {
       ...paginationSchema,
+      InvoiceDateFrom: z.string().optional().describe("Include invoices dated on or after this date (ISO 8601, e.g. 2025-12-01)"),
+      InvoiceDateTo: z.string().optional().describe("Include invoices dated on or before this date (ISO 8601, e.g. 2026-02-28)"),
+      DueDateFrom: z.string().optional().describe("Include invoices due on or after this date"),
+      DueDateTo: z.string().optional().describe("Include invoices due on or before this date"),
+      PaymentDateFrom: z.string().optional().describe("Include invoices with payment date on or after this date"),
+      PaymentDateTo: z.string().optional().describe("Include invoices with payment date on or before this date"),
+      States: z.array(z.number()).optional().describe("Filter by states (array of state numbers). Empty = all states"),
+      SupplierId: z.number().optional().describe("Filter by supplier ID"),
+      OnlyMine: z.boolean().optional().describe("Only return invoices owned by the current user"),
     },
     handler: async (args) => {
       try {
