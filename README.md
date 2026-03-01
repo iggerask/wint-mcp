@@ -10,7 +10,7 @@ Claude Desktop  <-->  wint-mcp (stdio)  <-->  Wint API
 
 ### 1. Get your Wint API credentials
 
-You need a **username** and **API key** from your Wint account. Contact Wint support or your account administrator to obtain these.
+In Wint, go to **Settings > Integrations > Custom integrations** and create a new integration. This gives you a **username** and **API key**. The integration's permissions control what the MCP server can access.
 
 ### 2. Install and build
 
