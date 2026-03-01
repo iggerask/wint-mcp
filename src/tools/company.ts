@@ -8,7 +8,7 @@ export const companyTools: WintTool[] = [
     name: "company_get",
     description: "Get details of a specific company by ID, including org number, address, and settings.",
     schema: {
-      id: z.string().describe("Company ID (GUID)"),
+      id: z.number().describe("Company ID (integer)"),
     },
     handler: async (args) => {
       try {
@@ -51,7 +51,7 @@ export const companyTools: WintTool[] = [
     name: "company_search_persons",
     description: "Search for persons (employees/contacts) within the current company.",
     schema: {
-      searchText: z.string().optional().describe("Search term (name, email, etc.)"),
+      SearchStr: z.string().optional().describe("Search string for employee name"),
     },
     handler: async (args) => {
       try {

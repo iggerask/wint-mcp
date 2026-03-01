@@ -8,10 +8,9 @@ export const timeReportingTools: WintTool[] = [
     name: "time_report_list",
     description: "List time reports with optional filtering by date range, person, or project.",
     schema: {
-      fromDate: z.string().optional().describe("Start date (YYYY-MM-DD)"),
-      toDate: z.string().optional().describe("End date (YYYY-MM-DD)"),
-      personId: z.string().optional().describe("Filter by person ID"),
-      projectId: z.string().optional().describe("Filter by project ID"),
+      StartDate: z.string().optional().describe("Start date (ISO 8601, e.g. 2025-12-01)"),
+      EndDate: z.string().optional().describe("End date (ISO 8601, e.g. 2026-02-28)"),
+      EmployeeId: z.number().optional().describe("Filter by employee ID (integer)"),
     },
     handler: async (args) => {
       try {

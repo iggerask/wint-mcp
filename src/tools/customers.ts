@@ -77,11 +77,11 @@ export const customerTools: WintTool[] = [
         const searchType = args.searchType ?? "general";
         let result;
         if (searchType === "name") {
-          result = await wintClient.get("/api/Customer/SearchByName", { name: args.query });
+          result = await wintClient.get("/api/Customer/SearchByName", { searchString: args.query });
         } else if (searchType === "orgNr") {
-          result = await wintClient.get("/api/Customer/SearchByOrgNr", { orgNr: args.query });
+          result = await wintClient.get("/api/Customer/SearchByOrgNr", { searchString: args.query });
         } else {
-          result = await wintClient.get("/api/Customer/Search", { searchText: args.query });
+          result = await wintClient.get("/api/Customer/Search", { SearchName: args.query });
         }
         return formatResult(result);
       } catch (error) {

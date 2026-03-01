@@ -106,7 +106,7 @@ export const accountingTools: WintTool[] = [
   },
   {
     name: "financial_report_balance",
-    description: "Generate a balance sheet (balansräkning). Provide reportParams with FromDate, ToDate, FinancialYearId, IncludeInactiveAccounts.",
+    description: "Generate a balance sheet (balansräkning). Provide reportParams with Columns (array of {StartMonth: {Year, Month}, EndMonth: {Year, Month}}), Dimensions.",
     schema: {
       reportParams: z.record(z.string(), z.any()).describe("Report parameters object"),
     },

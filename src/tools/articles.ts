@@ -37,11 +37,11 @@ export const articleTools: WintTool[] = [
     name: "article_search",
     description: "Search for articles by name.",
     schema: {
-      name: z.string().describe("Article name to search for"),
+      searchName: z.string().describe("Article name to search for"),
     },
     handler: async (args) => {
       try {
-        const result = await wintClient.get("/api/Article/SearchByName", { name: args.name });
+        const result = await wintClient.get("/api/Article/SearchByName", { searchName: args.searchName });
         return formatResult(result);
       } catch (error) {
         return formatError(error);

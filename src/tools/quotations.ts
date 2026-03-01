@@ -23,7 +23,7 @@ export const quotationTools: WintTool[] = [
     name: "quotation_get",
     description: "Get full details of a specific quotation by ID, including line items and customer info.",
     schema: {
-      id: z.string().describe("Quotation ID (GUID)"),
+      id: z.number().describe("Quotation ID (integer)"),
     },
     handler: async (args) => {
       try {
@@ -53,7 +53,7 @@ export const quotationTools: WintTool[] = [
     name: "quotation_update",
     description: "Update an existing quotation.",
     schema: {
-      id: z.string().describe("Quotation ID (GUID)"),
+      id: z.number().describe("Quotation serial number (integer)"),
       quotation: z.record(z.string(), z.any()).describe("Updated quotation object"),
     },
     handler: async (args) => {
