@@ -49,20 +49,20 @@ Restart Claude Desktop. You should see "wint" listed under the MCP tools icon.
 
 ## Modules
 
-The server exposes **65 tools** across 12 modules, plus a generic fallback tool for any endpoint not covered by the curated tools.
+The server exposes **89 tools** across 12 modules, plus a generic fallback tool for any endpoint not covered by the curated tools.
 
 | Module | Key | Tools | What it covers |
 |--------|-----|-------|----------------|
 | Invoicing | `invoicing` | 8 | Create, send, and manage customer invoices |
-| Incoming invoices | `incoming-invoices` | 6 | Supplier invoice approval workflow |
+| Incoming invoices | `incoming-invoices` | 10 | Supplier invoice approval workflow, create, route, supplier directory |
 | Customers | `customers` | 5 | Customer CRUD and search |
-| Receipts | `receipts` | 7 | Expense reports, file uploads |
+| Receipts | `receipts` | 9 | Expense reports, file uploads, categories, payment methods |
 | Quotations | `quotations` | 5 | Quotes / offers |
-| Accounting | `accounting` | 6 | Accounts, vouchers, financial reports |
-| Salary | `salary` | 3 | Salary reports and deviations |
+| Accounting | `accounting` | 11 | Accounts, vouchers, financial reports, dimensions, transactions |
+| Salary | `salary` | 12 | Reports, payslips, approvals, deviations, drafts, specs |
 | Time reporting | `time-reporting` | 4 | Time logs and projects |
-| Company | `company` | 4 | Company info and person search |
-| Todos | `todos` | 2 | Todo list and snoozing |
+| Company | `company` | 7 | Company info, employees, global search |
+| Todos | `todos` | 3 | Todo summary, list, and snoozing |
 | Articles | `articles` | 3 | Product / service articles |
 | Automations | `automations` | 11 | Supplier auto-approval rules, WintCard classification rules |
 | *Fallback* | *always loaded* | 1 | Generic `wint_api_call` for any API endpoint |
