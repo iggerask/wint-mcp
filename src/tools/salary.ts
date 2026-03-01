@@ -25,9 +25,38 @@ export const salaryTools: WintTool[] = [
     },
   },
   {
+    name: "salary_approval_report",
+    description: "Get the salary approval report for the current due month. Shows which employees' salaries are pending approval.",
+    schema: {},
+    handler: async () => {
+      try {
+        const result = await wintClient.get("/api/WintSalary/ApprovalReport");
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "salary_gross",
+    description: "Get gross salaries overview for a given year.",
+    schema: {
+      ...paginationSchema,
+      Year: z.number().describe("Year (e.g. 2025)"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/Salary/GrossSalaries", args);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
     name: "salary_entries",
     description:
-      "List individual salary entries with detailed filtering. Supports date ranges, amount ranges, and state filtering. Period params are YYYYMM integers.",
+      "List individual salary entries with detailed filtering. Supports period ranges, payout dates, amount ranges, and state filtering. Period params are YYYYMM integers.",
     schema: {
       ...paginationSchema,
       YearAndMonthFrom: z.number().optional().describe("Start period as YYYYMM integer (e.g. 202501)"),
@@ -40,6 +69,92 @@ export const salaryTools: WintTool[] = [
     handler: async (args) => {
       try {
         const result = await wintClient.get("/api/PersonSalary", args);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "salary_person_report",
+    description: "Get the salary approval report per person. Shows salary status for each employee.",
+    schema: {},
+    handler: async () => {
+      try {
+        const result = await wintClient.get("/api/PersonSalary/PersonSalaryReport");
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "salary_payslip",
+    description: "Get payslip data for a specific employee and salary period.",
+    schema: {
+      personId: z.number().describe("Employee person ID"),
+      yearMonth: z.number().describe("Salary period as YYYYMM integer (e.g. 202501)"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get(
+          `/api/WintSalary/Payslip/${sanitizePathParam(args.personId)}/yearMonth/${sanitizePathParam(args.yearMonth)}`,
+        );
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "salary_search_persons",
+    description: "Search for employees by name. Useful to find person IDs for other salary tools.",
+    schema: {
+      SearchStr: z.string().optional().describe("Search string for employee name"),
+      ExcludeSelf: z.boolean().optional().describe("Exclude the current user from results"),
+      ExcludeSalaryInactive: z.boolean().optional().describe("Exclude salary-disabled employees"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/WintSalary/SearchPersons", args);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "salary_spec_list",
+    description:
+      "List salary specification documents (lönespecifikationer) for all employees. Filter by person and year. Use FilterAll to see all employees' specs.",
+    schema: {
+      ...paginationSchema,
+      PersonId: z.number().optional().describe("Filter by employee person ID"),
+      Year: z.number().optional().describe("Filter by year (e.g. 2025)"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/SalarySpecificationDocument/FilterAll", args);
+        return formatResult(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    },
+  },
+  {
+    name: "salary_drafts",
+    description:
+      "List salary drafts with optional period and state filtering. Period params are YYYYMM integers.",
+    schema: {
+      ...paginationSchema,
+      From: z.number().optional().describe("Start period as YYYYMM integer (e.g. 202501, inclusive)"),
+      To: z.number().optional().describe("End period as YYYYMM integer (e.g. 202512, inclusive)"),
+      State: z.number().optional().describe("Filter by single draft state"),
+      States: z.array(z.number()).optional().describe("Filter by multiple draft states"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await wintClient.get("/api/SalaryDrafts", args);
         return formatResult(result);
       } catch (error) {
         return formatError(error);
