@@ -2,6 +2,7 @@
   "name": "wint-mcp",
   "version": "1.0.0",
   "description": "MCP server for the Wint/Superkoll business management API",
+  "license": "MIT",
   "type": "module",
   "main": "dist/src/index.js",
   "scripts": {

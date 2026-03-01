@@ -141,4 +141,4 @@ src/
 
 ## License
 
-Private / proprietary.
+[MIT](LICENSE)
