@@ -36,7 +36,7 @@ export const quotationTools: WintTool[] = [
   },
   {
     name: "quotation_create",
-    description: "Create a new quotation. Provide quotation object with CustomerId, Rows (array of {ArticleId, Description, Quantity, UnitPrice, Vat}), ValidUntilDate, OurReference, YourReference.",
+    description: "Create a new quotation. Provide quotation object with CustomerId, Date, EndDate, Currency, Language, PdfTemplate, and Rows (array of {ArticleId, Description, Quantity, Price, VAT}). Optional: ContactPerson, CustomerReference, Notes.",
     schema: {
       quotation: z.record(z.string(), z.any()).describe("Quotation object"),
     },
@@ -67,7 +67,7 @@ export const quotationTools: WintTool[] = [
   },
   {
     name: "quotation_send",
-    description: "Send a quotation to the customer via email. Provide mailOptions with QuotationId, To, Cc, Bcc, Subject, Body, AttachPdf.",
+    description: "Send a quotation to the customer via email. Provide mailOptions with SerialNumber (integer, required), MailSubject (required), MailToType (required, e.g. 'CustomerMail'), and optionally MailToAddresses, MailMessage, MailFrom.",
     schema: {
       mailOptions: z.record(z.string(), z.any()).describe("Mail options object"),
     },

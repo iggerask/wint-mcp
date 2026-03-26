@@ -26,7 +26,7 @@ export const automationTools: WintTool[] = [
     description:
       "List automatic approval rules for a specific incoming invoice supplier. These rules auto-approve invoices matching certain criteria (amount, account, etc.).",
     schema: {
-      supplierId: z.string().describe("Supplier ID (GUID)"),
+      supplierId: z.number().describe("Supplier ID (integer)"),
     },
     handler: async (args) => {
       try {
@@ -43,8 +43,8 @@ export const automationTools: WintTool[] = [
     name: "incoming_invoice_supplier_rule_get",
     description: "Get a specific automatic approval rule for an incoming invoice supplier.",
     schema: {
-      supplierId: z.string().describe("Supplier ID (GUID)"),
-      ruleId: z.string().describe("Rule ID (GUID)"),
+      supplierId: z.number().describe("Supplier ID (integer)"),
+      ruleId: z.number().describe("Rule ID (integer)"),
     },
     handler: async (args) => {
       try {
@@ -79,7 +79,7 @@ export const automationTools: WintTool[] = [
     name: "incoming_invoice_supplier_rule_update",
     description: "Update an existing automatic approval rule for incoming invoices.",
     schema: {
-      ruleId: z.string().describe("Rule ID (GUID)"),
+      ruleId: z.number().describe("Rule ID (integer)"),
       rule: z.record(z.string(), z.any()).describe("Updated rule object"),
     },
     handler: async (args) => {

@@ -45,7 +45,7 @@ export const invoicingTools: WintTool[] = [
   },
   {
     name: "invoice_create",
-    description: "Create a new customer invoice. Provide the invoice object with CustomerId, InvoiceDate, DueDate, Rows (array of {ArticleId, Description, Quantity, UnitPrice, Vat}), OurReference, YourReference, Currency. Returns the created invoice as a draft.",
+    description: "Create a new customer invoice. Provide the invoice object with CustomerId (required), DueDate (required), Currency (required, e.g. 'SEK'), Language (required, 'SV' or 'EN'), and Rows (required, array of {ArticleId, Description, Quantity, UnitPrice, Vat}). Optional: ContactPerson, CustomerReference ({ReferenceId, ReferenceName}), Notes, DeliveryDate. Returns the created invoice as a draft.",
     schema: {
       invoice: z.record(z.string(), z.any()).describe("Full invoice object"),
     },
@@ -91,13 +91,14 @@ export const invoicingTools: WintTool[] = [
   },
   {
     name: "invoice_send",
-    description: "Send/finalize an invoice (transitions from Draft to Sent). This assigns a serial number and makes the invoice official.",
+    description: "Send/finalize an invoice (transitions from Draft to Sent). This assigns a serial number and makes the invoice official. Requires InvoiceSendMethod: 'Email', 'Print', or 'MarkAsSent'. For Email, also provide MailOptions.",
     schema: {
       id: z.number().describe("Invoice ID (integer)"),
+      sendOptions: z.record(z.string(), z.any()).describe("Send options: {InvoiceSendMethod: 'Email'|'Print'|'MarkAsSent', MailOptions?: {...}}"),
     },
     handler: async (args) => {
       try {
-        const result = await wintClient.post(`/api/Invoice/Send/${sanitizePathParam(args.id)}`);
+        const result = await wintClient.post(`/api/Invoice/Send/${sanitizePathParam(args.id)}`, args.sendOptions);
         return formatResult(result);
       } catch (error) {
         return formatError(error);
@@ -106,13 +107,14 @@ export const invoicingTools: WintTool[] = [
   },
   {
     name: "invoice_send_reminder",
-    description: "Send a payment reminder for an overdue invoice.",
+    description: "Send a payment reminder for an overdue invoice. Provide reminder details: ReminderDueDate (ISO 8601), ReminderCost (optional fee amount), ReminderMessage (optional text).",
     schema: {
       id: z.number().describe("Invoice ID (integer)"),
+      reminder: z.record(z.string(), z.any()).describe("Reminder object: {ReminderDueDate, ReminderCost?, ReminderMessage?}"),
     },
     handler: async (args) => {
       try {
-        const result = await wintClient.post(`/api/Invoice/SendPaymentReminder/${sanitizePathParam(args.id)}`);
+        const result = await wintClient.post(`/api/Invoice/SendPaymentReminder/${sanitizePathParam(args.id)}`, args.reminder);
         return formatResult(result);
       } catch (error) {
         return formatError(error);
@@ -121,7 +123,7 @@ export const invoicingTools: WintTool[] = [
   },
   {
     name: "invoice_pdf",
-    description: "Get the PDF download URL for an invoice. Version 0 = latest, 1 = original.",
+    description: "Get the PDF data for an invoice as an InvoicePdf object (FileName, Data, ContentType). Version 0 = latest, 1 = original.",
     schema: {
       id: z.number().describe("Invoice ID (integer)"),
       version: z.number().optional().describe("PDF version: 0 = latest, 1 = original (default 0)"),

@@ -185,7 +185,7 @@ export const salaryTools: WintTool[] = [
     name: "salary_deviation_list",
     description: "List salary deviations (variable pay, bonuses, absences) for a given month.",
     schema: {
-      yearMonth: z.string().optional().describe("Period in YYYY-MM format"),
+      yearMonth: z.number().optional().describe("Period as YYYYMM integer (e.g. 202501)"),
     },
     handler: async (args) => {
       try {
@@ -202,7 +202,7 @@ export const salaryTools: WintTool[] = [
   },
   {
     name: "salary_deviation_create",
-    description: "Create a new salary deviation (e.g. bonus, overtime, absence). Provide deviation object with PersonId, DeviationType, Amount, YearMonth, Description.",
+    description: "Create a new salary deviation (e.g. bonus, overtime, absence). Provide deviation object with PersonId (integer), DeviationType, YearAndMonth (YYYYMM integer), Comment, and type-specific fields like Hours, Distance, FromDate, ToDate, FromTime, ToTime.",
     schema: {
       deviation: z.record(z.string(), z.any()).describe("Deviation object"),
     },

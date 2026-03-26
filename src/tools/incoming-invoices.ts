@@ -33,7 +33,7 @@ export const incomingInvoiceTools: WintTool[] = [
     name: "incoming_invoice_get",
     description: "Get full details of a specific incoming invoice by ID, including line items, supplier info, approval status, and attachments.",
     schema: {
-      id: z.string().describe("Incoming invoice ID (GUID)"),
+      id: z.number().describe("Incoming invoice ID (integer)"),
     },
     handler: async (args) => {
       try {
@@ -48,7 +48,7 @@ export const incomingInvoiceTools: WintTool[] = [
     name: "incoming_invoice_update",
     description: "Update an incoming invoice (e.g. change account coding, amounts, descriptions).",
     schema: {
-      id: z.string().describe("Incoming invoice ID (GUID)"),
+      id: z.number().describe("Incoming invoice ID (integer)"),
       invoice: z.record(z.string(), z.any()).describe("Updated incoming invoice object"),
     },
     handler: async (args) => {
@@ -64,7 +64,7 @@ export const incomingInvoiceTools: WintTool[] = [
     name: "incoming_invoice_sign",
     description: "Sign/approve an incoming invoice (first approval step). The invoice must be in a state that allows signing.",
     schema: {
-      id: z.string().describe("Incoming invoice ID (GUID)"),
+      id: z.number().describe("Incoming invoice ID (integer)"),
     },
     handler: async (args) => {
       try {
@@ -79,7 +79,7 @@ export const incomingInvoiceTools: WintTool[] = [
     name: "incoming_invoice_certify",
     description: "Certify an incoming invoice (final approval step). Moves the invoice to payment queue.",
     schema: {
-      id: z.string().describe("Incoming invoice ID (GUID)"),
+      id: z.number().describe("Incoming invoice ID (integer)"),
     },
     handler: async (args) => {
       try {
@@ -166,7 +166,7 @@ export const incomingInvoiceTools: WintTool[] = [
     name: "incoming_invoice_cancel",
     description: "Cancel an incoming invoice. Removes it from the approval flow.",
     schema: {
-      id: z.string().describe("Incoming invoice ID (GUID)"),
+      id: z.number().describe("Incoming invoice ID (integer)"),
     },
     handler: async (args) => {
       try {

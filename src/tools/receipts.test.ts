@@ -143,7 +143,8 @@ describe("receipt tools", () => {
       expect(mockGet).toHaveBeenCalledWith("/api/Receipt/receipt-123");
       expect(mockPut).toHaveBeenCalledWith("/api/Receipt/receipt-123", {
         Id: "receipt-123",
-        Images: ["file-001", "file-999"],
+        Images: ["file-001"],
+        Attachments: [{ UploadedFileId: "file-999" }],
         Amount: 100,
       });
       expect(result.isError).toBeUndefined();
@@ -165,7 +166,7 @@ describe("receipt tools", () => {
       expect(mockPut).toHaveBeenCalledWith("/api/Receipt/receipt-123", {
         Id: "receipt-123",
         Amount: 50,
-        Images: ["file-999"],
+        Attachments: [{ UploadedFileId: "file-999" }],
       });
     });
 

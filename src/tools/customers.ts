@@ -36,7 +36,7 @@ export const customerTools: WintTool[] = [
   },
   {
     name: "customer_create",
-    description: "Create a new customer. Provide a customer object with Name, OrgNo, Email, Phone, Address, PostalCode, City, Country, PaymentTerms, DefaultDeliveryMethod.",
+    description: "Create a new customer. Provide a customer object with Name (required), Type (required, e.g. 'Company' or 'Private'), BillingAddress (required object: {Street1, ZipCode, City (required), CountryCode}), and optionally OrgNumber, EmailAddress, PhoneNumber, PaymentTerms, Language.",
     schema: {
       customer: z.record(z.string(), z.any()).describe("Customer object"),
     },

@@ -20,7 +20,7 @@ export const articleTools: WintTool[] = [
   },
   {
     name: "article_create",
-    description: "Create a new article/product. Provide article object with Name, UnitPrice, Vat (decimal, e.g. 0.25 for 25%), Unit, AccountNumber, ArticleNumber.",
+    description: "Create a new article/product. Provide article object with Text (required, article name/description), UnitPrice (required, price per unit), Vat (required, percentage integer: 0, 6, 12, or 25), and optionally UnitId (integer).",
     schema: {
       article: z.record(z.string(), z.any()).describe("Article object"),
     },

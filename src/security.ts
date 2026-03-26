@@ -47,11 +47,18 @@ export function sanitizeErrorForOutput(error: any): {
   if (error?.response) {
     const { status, data } = error.response;
     const message =
-      data?.Message || data?.message || data?.title || "Request failed";
+      data?.Message || data?.message || data?.title ||
+      (typeof data === "string" ? data : null) ||
+      "Request failed";
 
     let details: unknown = undefined;
     if (data?.Errors || data?.errors) {
       details = data.Errors || data.errors;
+    } else if (data?.ModelState) {
+      details = data.ModelState;
+    } else if (data && typeof data === "object" && !data.Message && !data.message && !data.title) {
+      // Surface raw response body when no standard error fields are present
+      details = data;
     }
 
     const result = { error: true as const, status, message, details };

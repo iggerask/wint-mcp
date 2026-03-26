@@ -130,9 +130,12 @@ export const accountingTools: WintTool[] = [
       Transactions: z
         .array(z.record(z.string(), z.any()))
         .describe(
-          "Array of transaction lines. Each: {AccountNumber (int), Amount (decimal, positive=debit negative=credit), Text (string), DimensionItemId (uuid, optional)}",
+          "Array of transaction lines. Each: {AccountNumber (int), Amount (decimal, positive=debit negative=credit), Text (string), Dimensions (array of uuids, optional), AccountId (uuid, alternative to AccountNumber)}",
         ),
-      Images: z.array(z.string()).optional().describe("Array of uploaded file IDs to attach"),
+      Images: z
+        .array(z.record(z.string(), z.any()))
+        .optional()
+        .describe("Array of voucher image objects to attach. Each: {Data (base64-encoded bytes), ContentType (string)}"),
     },
     handler: async (args) => {
       try {

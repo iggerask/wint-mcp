@@ -72,10 +72,11 @@ describe("invoicing tools", () => {
   });
 
   describe("invoice_send", () => {
-    it("calls POST /api/Invoice/Send/{id}", async () => {
+    it("calls POST /api/Invoice/Send/{id} with sendOptions", async () => {
       const tool = findTool("invoice_send");
-      await tool.handler({ id: "abc-123" });
-      expect(mockPost).toHaveBeenCalledWith("/api/Invoice/Send/abc-123");
+      const sendOptions = { InvoiceSendMethod: "MarkAsSent" };
+      await tool.handler({ id: "abc-123", sendOptions });
+      expect(mockPost).toHaveBeenCalledWith("/api/Invoice/Send/abc-123", sendOptions);
     });
   });
 

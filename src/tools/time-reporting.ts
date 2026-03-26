@@ -23,7 +23,7 @@ export const timeReportingTools: WintTool[] = [
   },
   {
     name: "time_report_create",
-    description: "Create/merge time report entries. Provide timeReport object with ProjectId, Date, Hours, Description, PersonId.",
+    description: "Create/merge time report entries. Provide timeReport object with EmployeeId (integer), Projects (array of available project objects), and Weeks (array of week objects containing time entries). This is a complex nested structure — fetch an existing time report first via time_report_list to see the expected format.",
     schema: {
       timeReport: z.record(z.string(), z.any()).describe("Time report object"),
     },

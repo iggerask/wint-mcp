@@ -36,7 +36,7 @@ export const companyTools: WintTool[] = [
     name: "company_select",
     description: "Select/switch to a specific company. All subsequent API calls will be in the context of this company.",
     schema: {
-      companyId: z.string().describe("Company ID (GUID) to switch to"),
+      companyId: z.number().describe("Company ID (integer) to switch to"),
     },
     handler: async (args) => {
       try {
