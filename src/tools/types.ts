@@ -34,7 +34,11 @@ export function formatResult(data: any): { content: Array<{ type: "text"; text: 
 
 /**
  * Merge the top-level pagination fields with the user-supplied `filters` object.
- * Pagination wins on conflict (since it's the documented top-level surface).
+ *
+ * Top-level pagination keys (Page, NumPerPage, OrderByProperty, OrderByDescending)
+ * override same-named values in `filters` when provided. If a top-level key is
+ * undefined, the value from `filters` (if any) passes through.
+ *
  * Used by list-mode handlers to assemble GET query params.
  */
 export function mergeListParams(args: Record<string, any>): Record<string, any> {
@@ -103,6 +107,8 @@ export function defineDomainTool(cfg: DomainToolConfig): WintTool | null {
 
   if (modes.length === 0) return null;
 
+  // Cast: z.enum requires a non-empty tuple. Safe because we just returned
+  // when modes.length === 0.
   const modeNames = modes.map((m) => m.name) as [string, ...string[]];
   const modeIndex = new Map(modes.map((m) => [m.name, m]));
 

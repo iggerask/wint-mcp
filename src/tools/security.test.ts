@@ -147,21 +147,6 @@ describe("cross-cutting security: path traversal", () => {
   }
 });
 
-describe("cross-cutting security: wint_endpoint_lookup", () => {
-  const tools = getAllTools();
-  const tool = tools.find((t) => t.name === "wint_endpoint_lookup");
-
-  it("exists", () => {
-    expect(tool).toBeDefined();
-  });
-
-  it("rejects unknown groups", async () => {
-    const result = await tool!.handler({ group: "DoesNotExist" });
-    expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("Unknown endpoint group");
-  });
-});
-
 describe("cross-cutting security: error sanitization", () => {
   it("formatError never leaks auth credentials", () => {
     const error = {

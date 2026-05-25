@@ -24,7 +24,7 @@ export const endpointLookupTool: WintTool = {
     group: z
       .string()
       .describe(
-        `Resource group name (case-sensitive). One of: ${ALL_GROUPS.slice(0, 50).join(", ")}${ALL_GROUPS.length > 50 ? ", ..." : ""}.`,
+        `Resource group name (case-sensitive). One of: ${ALL_GROUPS.join(", ")}.`,
       ),
   },
   handler: async (args) => {

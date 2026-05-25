@@ -91,4 +91,23 @@ describe("fallbackTool (wint_api_call)", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("Server error");
   });
+
+  describe("description", () => {
+    it("does not inline the full ENDPOINT_INDEX", () => {
+      // Regression guard: prior versions inlined the ~30KB endpoint index here,
+      // paid per-session in tokens. The index now lives behind wint_endpoint_lookup.
+      expect(fallbackTool.description).not.toContain("FULL ENDPOINT INDEX");
+      expect(fallbackTool.description.length).toBeLessThan(5000);
+    });
+
+    it("lists available endpoint groups and points to wint_endpoint_lookup", () => {
+      expect(fallbackTool.description).toContain("Available endpoint groups:");
+      expect(fallbackTool.description).toContain("Invoice");
+      expect(fallbackTool.description).toContain("wint_endpoint_lookup");
+    });
+
+    it("documents the /api/ path requirement", () => {
+      expect(fallbackTool.description).toContain("/api/");
+    });
+  });
 });

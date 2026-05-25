@@ -40,6 +40,11 @@ export async function loadFileInput(
   args: FileInput,
 ): Promise<{ data: string; contentType: string; fileName: string }> {
   if (args.filePath) {
+    if (!path.isAbsolute(args.filePath)) {
+      throw new Error(
+        `filePath must be an absolute path (got: ${args.filePath}). Relative paths resolve against the MCP server's working directory, which is rarely what you want — pass the full path instead.`,
+      );
+    }
     const buf = await fs.readFile(args.filePath);
     const data = buf.toString("base64");
     const fileName = args.fileName ?? path.basename(args.filePath);

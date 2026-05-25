@@ -149,6 +149,15 @@ wint_receipt({
 
 Recognized extensions for auto-detect: `.png`, `.jpg`/`.jpeg`, `.gif`, `.webp`, `.heic`/`.heif`, `.bmp`, `.tif`/`.tiff`, `.pdf`. Anything else falls back to `application/octet-stream` — pass `contentType` explicitly in that case.
 
+`filePath` must be **absolute**. Relative paths are rejected with a clear error rather than silently resolving against the MCP server's working directory (which is rarely where you'd expect — Claude Desktop launches the binary from its own install dir).
+
+## Security notes
+
+- **Unsandboxed file reads.** `filePath` uploads use `fs.readFile`, so the MCP process can read any file the user account can. A prompt-injection attack could trick the agent into uploading sensitive files (e.g. `~/.ssh/id_rsa`, `.env` files) to Wint storage. Treat the MCP's filesystem access as equivalent to your own user account; if you're forwarding untrusted prompts, review uploads before they land in Wint.
+- **No allowlist yet.** A future `WINT_ALLOWED_UPLOAD_DIRS` env var to restrict reads to specific roots is on the wishlist but not implemented. For now, the only restriction is the OS-level permissions on the running user.
+- **API path restriction.** `wint_api_call` is restricted to paths starting with `/api/` via `validateApiPath` in `src/security.ts`. It cannot be used to hit non-Wint endpoints, traverse out of the API namespace, or include `..` / `//` / backslashes / null bytes.
+- **Error sanitization.** API errors are stripped of `config` (which holds auth credentials) before being returned. Response bodies are truncated at 2KB to avoid leaking large payloads back to the model.
+
 ## The fallback tools
 
 The Wint API has hundreds of endpoints; the curated domain tools cover the most common workflows. When you need something else:

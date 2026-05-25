@@ -228,6 +228,28 @@ describe("wint_receipt", () => {
       expect(result.content[0].text).toMatch(/ENOENT|no such file/i);
       expect(mockPost).not.toHaveBeenCalled();
     });
+
+    it("rejects relative filePath", async () => {
+      const tool = getTool();
+      const result = await tool.handler({
+        mode: "file_upload",
+        filePath: "relative/path.png",
+      });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain("absolute path");
+      expect(mockPost).not.toHaveBeenCalled();
+    });
+
+    it("rejects bare-filename filePath as non-absolute", async () => {
+      const tool = getTool();
+      const result = await tool.handler({
+        mode: "file_upload",
+        filePath: "receipt.png",
+      });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain("absolute path");
+      expect(mockPost).not.toHaveBeenCalled();
+    });
   });
 
   describe("mode=upload_image", () => {
