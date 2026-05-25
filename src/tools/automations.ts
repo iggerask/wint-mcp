@@ -1,208 +1,131 @@
 import { z } from "zod";
 import { wintClient } from "../auth/client.js";
-import { WintTool, formatResult, formatError } from "./types.js";
+import { WintTool, defineDomainTool } from "./types.js";
 import { sanitizePathParam } from "../security.js";
 
-export const automationTools: WintTool[] = [
-  // --- Customer automation rules ---
-  {
-    name: "automation_rule_list",
-    description:
-      "List customer automation rules. These are company-level rules that automate document handling (e.g. auto-routing incoming invoices to a person).",
-    schema: {},
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/AutomationRule", args);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
+export function automationTools(): WintTool[] {
+  const customerRuleTool = defineDomainTool({
+    name: "wint_customer_automation_rule",
+    summary: "Company-level customer automation rules (e.g. auto-routing incoming invoices to a person).",
+    modes: [
+      {
+        name: "list",
+        description: "List customer automation rules. No params.",
+        handler: async () => wintClient.get("/api/AutomationRule"),
+      },
+    ],
+    includePagination: false,
+  });
 
-  // --- Incoming invoice supplier auto-approval rules ---
-  {
-    name: "incoming_invoice_supplier_rule_list",
-    description:
-      "List automatic approval rules for a specific incoming invoice supplier. These rules auto-approve invoices matching certain criteria (amount, account, etc.).",
-    schema: {
-      supplierId: z.number().describe("Supplier ID (integer)"),
+  const supplierRuleTool = defineDomainTool({
+    name: "wint_supplier_rule",
+    summary:
+      "Automatic approval rules for incoming invoices, per supplier. Modes: list, get, create, update.",
+    modes: [
+      {
+        name: "list",
+        description: "List supplier auto-approval rules. Required: supplierId (integer).",
+        required: ["supplierId"],
+        handler: async (args) =>
+          wintClient.get(
+            `/api/IncomingInvoice/Suppliers/${sanitizePathParam(args.supplierId)}/Rule`,
+          ),
+      },
+      {
+        name: "get",
+        description: "Get a specific supplier auto-approval rule. Required: supplierId, id (rule ID).",
+        required: ["supplierId", "id"],
+        handler: async (args) =>
+          wintClient.get(
+            `/api/IncomingInvoice/Suppliers/${sanitizePathParam(args.supplierId)}/Rule/${sanitizePathParam(args.id)}`,
+          ),
+      },
+      {
+        name: "create",
+        description:
+          "Create an auto-approval rule. Required: data → rule object with supplier and approval criteria (e.g. max amount, account number).",
+        required: ["data"],
+        handler: async (args) => wintClient.post("/api/IncomingInvoice/Suppliers/Rule", args.data),
+      },
+      {
+        name: "update",
+        description: "Update an auto-approval rule. Required: id (rule ID), data (updated rule object).",
+        required: ["id", "data"],
+        handler: async (args) =>
+          wintClient.put(
+            `/api/IncomingInvoice/Suppliers/Rule/${sanitizePathParam(args.id)}`,
+            args.data,
+          ),
+      },
+    ],
+    includePagination: false,
+    extraSchema: {
+      supplierId: z.number().optional().describe("Supplier ID (required for list and get)."),
     },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get(
-          `/api/IncomingInvoice/Suppliers/${sanitizePathParam(args.supplierId)}/Rule`,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "incoming_invoice_supplier_rule_get",
-    description: "Get a specific automatic approval rule for an incoming invoice supplier.",
-    schema: {
-      supplierId: z.number().describe("Supplier ID (integer)"),
-      ruleId: z.number().describe("Rule ID (integer)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get(
-          `/api/IncomingInvoice/Suppliers/${sanitizePathParam(args.supplierId)}/Rule/${sanitizePathParam(args.ruleId)}`,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "incoming_invoice_supplier_rule_create",
-    description:
-      "Create an automatic approval rule for incoming invoices from a supplier. The rule defines criteria (e.g. max amount, account number) under which invoices are auto-approved.",
-    schema: {
-      rule: z
-        .record(z.string(), z.any())
-        .describe("Rule object with supplier and approval criteria"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/IncomingInvoice/Suppliers/Rule", args.rule);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "incoming_invoice_supplier_rule_update",
-    description: "Update an existing automatic approval rule for incoming invoices.",
-    schema: {
-      ruleId: z.number().describe("Rule ID (integer)"),
-      rule: z.record(z.string(), z.any()).describe("Updated rule object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.put(
-          `/api/IncomingInvoice/Suppliers/Rule/${sanitizePathParam(args.ruleId)}`,
-          args.rule,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
+  });
 
-  // --- WintCard receipt automation rules ---
-  {
-    name: "wintcard_rule_get",
-    description:
-      "Get a WintCard automation rule by ID. WintCard rules auto-classify card receipts (set account, supplier name, description, etc.).",
-    schema: {
-      id: z.string().describe("WintCard rule ID (GUID)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get(
-          `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}`,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "wintcard_rule_create",
-    description:
-      "Create a new WintCard automation rule. Defines how card transactions from a specific merchant are auto-classified (account, VAT, description, etc.).",
-    schema: {
-      rule: z
-        .record(z.string(), z.any())
-        .describe("WintCard rule object with merchant matching and classification data"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post(
-          "/api/ReceiptAutomationRule/WintCardRule",
-          args.rule,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "wintcard_rule_update",
-    description: "Update an existing WintCard automation rule.",
-    schema: {
-      id: z.string().describe("WintCard rule ID (GUID)"),
-      rule: z.record(z.string(), z.any()).describe("Updated WintCard rule object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.put(
-          `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}`,
-          args.rule,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "wintcard_rule_delete",
-    description: "Delete a WintCard automation rule.",
-    schema: {
-      id: z.string().describe("WintCard rule ID (GUID)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.delete(
-          `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}`,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "wintcard_rule_activate",
-    description: "Activate a WintCard automation rule.",
-    schema: {
-      id: z.string().describe("WintCard rule ID (GUID)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.put(
-          `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}/Activate`,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "wintcard_rule_deactivate",
-    description: "Deactivate a WintCard automation rule (keeps the rule but stops it from matching).",
-    schema: {
-      id: z.string().describe("WintCard rule ID (GUID)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.put(
-          `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}/Deactivate`,
-        );
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-];
+  const wintcardRuleTool = defineDomainTool({
+    name: "wint_wintcard_rule",
+    summary:
+      "WintCard automation rules — auto-classify card receipts (account, supplier name, description). Modes: get, create, update, delete, activate, deactivate.",
+    modes: [
+      {
+        name: "get",
+        description: "Get a WintCard rule by id (GUID). Required: id.",
+        required: ["id"],
+        handler: async (args) =>
+          wintClient.get(`/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}`),
+      },
+      {
+        name: "create",
+        description:
+          "Create a WintCard rule. Required: data → rule object with merchant matching and classification (account, VAT, description).",
+        required: ["data"],
+        handler: async (args) =>
+          wintClient.post("/api/ReceiptAutomationRule/WintCardRule", args.data),
+      },
+      {
+        name: "update",
+        description: "Update a WintCard rule. Required: id (GUID), data.",
+        required: ["id", "data"],
+        handler: async (args) =>
+          wintClient.put(
+            `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}`,
+            args.data,
+          ),
+      },
+      {
+        name: "delete",
+        description: "Delete a WintCard rule. Required: id (GUID).",
+        required: ["id"],
+        handler: async (args) =>
+          wintClient.delete(
+            `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}`,
+          ),
+      },
+      {
+        name: "activate",
+        description: "Activate a WintCard rule. Required: id (GUID).",
+        required: ["id"],
+        handler: async (args) =>
+          wintClient.put(
+            `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}/Activate`,
+          ),
+      },
+      {
+        name: "deactivate",
+        description: "Deactivate a WintCard rule (keeps it but stops it from matching). Required: id (GUID).",
+        required: ["id"],
+        handler: async (args) =>
+          wintClient.put(
+            `/api/ReceiptAutomationRule/WintCardRule/${sanitizePathParam(args.id)}/Deactivate`,
+          ),
+      },
+    ],
+    includePagination: false,
+  });
+
+  return [customerRuleTool, supplierRuleTool, wintcardRuleTool].filter(
+    (t): t is WintTool => t !== null,
+  );
+}

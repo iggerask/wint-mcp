@@ -4,14 +4,18 @@ import { ENDPOINT_INDEX } from "../generated/endpoint-index.js";
 import { WintTool, formatResult, formatError } from "./types.js";
 import { validateApiPath } from "../security.js";
 
+// Extract the bracketed group names from the endpoint index, e.g. [Account], [Invoice], etc.
+const GROUP_NAMES = Array.from(ENDPOINT_INDEX.matchAll(/\[([A-Za-z0-9_]+)\]/g)).map((m) => m[1]);
+
 export const fallbackTool: WintTool = {
   name: "wint_api_call",
-  description: `Call any Wint/Superkoll API endpoint directly. Use this for any endpoint not covered by the curated tools.
+  description: `Generic escape hatch — call any Wint/Superkoll API endpoint directly. Use this only when no curated domain tool (wint_invoice, wint_receipt, wint_salary, etc.) covers your need.
 
-Provide the HTTP method, path (e.g. /api/Invoice/List), and optionally query params and/or JSON body.
+Required: method (GET|POST|PUT|DELETE|PATCH), path (must start with /api/, e.g. /api/Invoice/List). Optional: params (query), body (JSON for POST/PUT/PATCH).
 
-FULL ENDPOINT INDEX:
-${ENDPOINT_INDEX}`,
+Available endpoint groups: ${GROUP_NAMES.join(", ")}.
+
+To see specific endpoints in a group, call wint_endpoint_lookup with that group name first.`,
   schema: {
     method: z.enum(["GET", "POST", "PUT", "DELETE", "PATCH"]).describe("HTTP method"),
     path: z.string().describe("API path, e.g. /api/Invoice/List"),
@@ -21,14 +25,10 @@ ${ENDPOINT_INDEX}`,
   handler: async (args) => {
     try {
       const safePath = validateApiPath(args.path);
-      const result = await wintClient.request(
-        args.method,
-        safePath,
-        {
-          params: args.params,
-          data: args.body,
-        }
-      );
+      const result = await wintClient.request(args.method, safePath, {
+        params: args.params,
+        data: args.body,
+      });
       return formatResult(result);
     } catch (error) {
       return formatError(error);

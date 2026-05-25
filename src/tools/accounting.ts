@@ -1,223 +1,123 @@
 import { z } from "zod";
 import { wintClient } from "../auth/client.js";
-import { WintTool, paginationSchema, formatResult, formatError } from "./types.js";
+import { WintTool, defineDomainTool, mergeListParams } from "./types.js";
 import { sanitizePathParam } from "../security.js";
 
-export const accountingTools: WintTool[] = [
-  {
-    name: "account_list",
-    description: "List all accounts in the chart of accounts. Returns account number, name, type, and balance.",
-    schema: {},
-    handler: async () => {
-      try {
-        const result = await wintClient.get("/api/Account");
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
+export function accountingTools(): WintTool[] {
+  const chartOfAccountsTool = defineDomainTool({
+    name: "wint_chart_of_accounts",
+    summary:
+      "Chart of accounts, dimensions, and ledger transactions: account_list, account_balance, dimension_list, dimension_create, transaction_list.",
+    modes: [
+      {
+        name: "account_list",
+        description: "List all accounts. No params. Returns account number, name, type, balance.",
+        handler: async () => wintClient.get("/api/Account"),
+      },
+      {
+        name: "account_balance",
+        description: "Get balance for a specific account number. Required: account (integer, e.g. 1930).",
+        required: ["account"],
+        handler: async (args) =>
+          wintClient.get(`/api/Account/AccountBalance/${sanitizePathParam(args.account)}`),
+      },
+      {
+        name: "dimension_list",
+        description:
+          "List accounting dimensions (cost centers, projects). filters → {TypeId?: string (UUID), CompatibilityType?: number (0=CostCenter, 1=Project)}. Pagination supported.",
+        handler: async (args) => wintClient.get("/api/Dimension", mergeListParams(args)),
+      },
+      {
+        name: "dimension_create",
+        description:
+          "Create a dimension. Required: data → {DimensionTypeId (UUID), Name, Active (boolean)}. Optional: ShortName.",
+        required: ["data"],
+        handler: async (args) => wintClient.post("/api/Dimension", args.data),
+      },
+      {
+        name: "transaction_list",
+        description:
+          "List booked accounting transactions. filters → {BookingDateStart?, BookingDateEnd? (ISO 8601), AccountStart?, AccountEnd?, AccountRange? (e.g. '4000<4999,5000<6999-5410'), MinAmount?, MaxAmount?}. Pagination supported.",
+        handler: async (args) => wintClient.get("/api/Transaction", mergeListParams(args)),
+      },
+    ],
+    extraSchema: {
+      account: z.number().optional().describe("For mode=account_balance: account number."),
     },
-  },
-  {
-    name: "account_balance",
-    description: "Get the balance for a specific account number.",
-    schema: {
-      account: z.number().describe("Account number (e.g. 1930)"),
+  });
+
+  const voucherTool = defineDomainTool({
+    name: "wint_voucher",
+    summary: "Accounting vouchers: list, get, create.",
+    modes: [
+      {
+        name: "list",
+        description: "List vouchers with pagination.",
+        handler: async (args) => wintClient.get("/api/Voucher", mergeListParams(args)),
+      },
+      {
+        name: "get",
+        description: "Get a single voucher by id (GUID). Required: id.",
+        required: ["id"],
+        handler: async (args) => wintClient.get(`/api/Voucher/${sanitizePathParam(args.id)}`),
+      },
+      {
+        name: "create",
+        description:
+          "Create a voucher with transactions (debits/credits). The sum of all transaction amounts must equal zero (balanced). Required: data → {BookingDate (ISO 8601), SeriesId (UUID), Transactions: [{AccountNumber|AccountId, Amount (positive=debit, negative=credit), Text, Dimensions?: uuid[]}, ...]}. Optional in data: Text, Images: [{Data (base64), ContentType}, ...].",
+        required: ["data"],
+        handler: async (args) =>
+          wintClient.post("/api/Voucher", {
+            ...args.data,
+            ValidateLockedSystemAccounts: args.data.ValidateLockedSystemAccounts ?? true,
+          }),
+      },
+    ],
+  });
+
+  const financialReportTool = defineDomainTool({
+    name: "wint_financial_report",
+    summary:
+      "Financial statements: monthly_result (P&L by month), result (income statement), balance (balance sheet).",
+    modes: [
+      {
+        name: "monthly_result",
+        description:
+          "Monthly P&L (resultaträkning) per account per month. Required: startYear, startMonth (1-12), endYear, endMonth (1-12). Optional: dimensions (array of UUIDs).",
+        required: ["startYear", "startMonth", "endYear", "endMonth"],
+        handler: async (args) =>
+          wintClient.post("/api/FinancialReports/MonthlyResultReport", {
+            StartMonth: { Year: args.startYear, Month: args.startMonth },
+            EndMonth: { Year: args.endYear, Month: args.endMonth },
+            Dimensions: args.dimensions ?? null,
+          }),
+      },
+      {
+        name: "result",
+        description:
+          "Income statement (resultaträkning). Required: data → {Columns: [{StartMonth: {Year, Month}, EndMonth: {Year, Month}}, ...], Dimensions?}.",
+        required: ["data"],
+        handler: async (args) => wintClient.post("/api/FinancialReports/ResultReport", args.data),
+      },
+      {
+        name: "balance",
+        description:
+          "Balance sheet (balansräkning). Required: data → {Columns: [{StartMonth: {Year, Month}, EndMonth: {Year, Month}}, ...], Dimensions?}.",
+        required: ["data"],
+        handler: async (args) => wintClient.post("/api/FinancialReports/BalanceReport", args.data),
+      },
+    ],
+    includePagination: false,
+    extraSchema: {
+      startYear: z.number().optional().describe("For mode=monthly_result: start year."),
+      startMonth: z.number().min(1).max(12).optional().describe("For mode=monthly_result: start month (1-12)."),
+      endYear: z.number().optional().describe("For mode=monthly_result: end year."),
+      endMonth: z.number().min(1).max(12).optional().describe("For mode=monthly_result: end month (1-12)."),
+      dimensions: z.array(z.string()).optional().describe("For mode=monthly_result: dimension UUIDs to filter by."),
     },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get(`/api/Account/AccountBalance/${sanitizePathParam(args.account)}`);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "voucher_list",
-    description: "List accounting vouchers with pagination.",
-    schema: {
-      ...paginationSchema,
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/Voucher", args);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "voucher_get",
-    description: "Get full details of a specific accounting voucher by ID.",
-    schema: {
-      id: z.string().describe("Voucher ID (GUID)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get(`/api/Voucher/${sanitizePathParam(args.id)}`);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "monthly_result_report",
-    description:
-      "Get a monthly P&L / income statement (resultaträkning) broken down by account and month. Returns booked amounts per account per month for the given period. This is the best tool for understanding revenue and costs over time.",
-    schema: {
-      startYear: z.number().describe("Start year (e.g. 2025)"),
-      startMonth: z.number().min(1).max(12).describe("Start month (1-12)"),
-      endYear: z.number().describe("End year (e.g. 2026)"),
-      endMonth: z.number().min(1).max(12).describe("End month (1-12)"),
-      dimensions: z
-        .array(z.string())
-        .optional()
-        .describe("Optional dimension IDs (UUIDs) to filter by"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/FinancialReports/MonthlyResultReport", {
-          StartMonth: { Year: args.startYear, Month: args.startMonth },
-          EndMonth: { Year: args.endYear, Month: args.endMonth },
-          Dimensions: args.dimensions ?? null,
-        });
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "financial_report_result",
-    description: "Generate an income statement (resultaträkning). Provide reportParams with Columns (array of {StartMonth: {Year, Month}, EndMonth: {Year, Month}}), Dimensions.",
-    schema: {
-      reportParams: z.record(z.string(), z.any()).describe("Report parameters object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/FinancialReports/ResultReport", args.reportParams);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "financial_report_balance",
-    description: "Generate a balance sheet (balansräkning). Provide reportParams with Columns (array of {StartMonth: {Year, Month}, EndMonth: {Year, Month}}), Dimensions.",
-    schema: {
-      reportParams: z.record(z.string(), z.any()).describe("Report parameters object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/FinancialReports/BalanceReport", args.reportParams);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "voucher_create",
-    description:
-      "Create a new accounting voucher with transactions. Each transaction is a debit or credit line on an account. The sum of all transaction amounts must equal zero (balanced).",
-    schema: {
-      BookingDate: z.string().describe("Booking date (ISO 8601, e.g. 2026-01-15)"),
-      SeriesId: z.string().describe("Voucher series ID (UUID)"),
-      Text: z.string().optional().describe("Voucher description/text"),
-      Transactions: z
-        .array(z.record(z.string(), z.any()))
-        .describe(
-          "Array of transaction lines. Each: {AccountNumber (int), Amount (decimal, positive=debit negative=credit), Text (string), Dimensions (array of uuids, optional), AccountId (uuid, alternative to AccountNumber)}",
-        ),
-      Images: z
-        .array(z.record(z.string(), z.any()))
-        .optional()
-        .describe("Array of voucher image objects to attach. Each: {Data (base64-encoded bytes), ContentType (string)}"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/Voucher", {
-          BookingDate: args.BookingDate,
-          SeriesId: args.SeriesId,
-          ValidateLockedSystemAccounts: true,
-          Text: args.Text,
-          Transactions: args.Transactions,
-          Images: args.Images,
-        });
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "dimension_list",
-    description:
-      "List accounting dimensions (cost centers, projects). Dimensions are used to tag transactions for reporting. Filter by type or compatibility.",
-    schema: {
-      ...paginationSchema,
-      TypeId: z.string().optional().describe("Dimension type ID (UUID) to filter by"),
-      CompatibilityType: z
-        .number()
-        .optional()
-        .describe("Filter by compatibility type: 0 = CostCenter, 1 = Project"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/Dimension", args);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "dimension_create",
-    description: "Create a new accounting dimension (cost center or project).",
-    schema: {
-      DimensionTypeId: z.string().describe("Dimension type ID (UUID) — get from dimension_list"),
-      Name: z.string().describe("Dimension name"),
-      ShortName: z.string().optional().describe("Short name / code"),
-      Active: z.boolean().describe("Whether the dimension is active"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/Dimension", {
-          DimensionTypeId: args.DimensionTypeId,
-          Name: args.Name,
-          ShortName: args.ShortName,
-          Active: args.Active,
-        });
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "transaction_list",
-    description:
-      "List booked accounting transactions with date and account filtering. Useful for seeing exactly what has been booked to specific accounts in a period. Supports account ranges like '4000<4999' or '5000<6999-5410' (include range, exclude account).",
-    schema: {
-      ...paginationSchema,
-      BookingDateStart: z.string().optional().describe("Start of booking date range (ISO 8601, e.g. 2025-12-01)"),
-      BookingDateEnd: z.string().optional().describe("End of booking date range (ISO 8601, e.g. 2026-02-28)"),
-      AccountStart: z.number().optional().describe("Start of account number range (e.g. 4000)"),
-      AccountEnd: z.number().optional().describe("End of account number range (e.g. 4999)"),
-      AccountRange: z.string().optional().describe("Account range expression (e.g. '4000<4999,5000<6999-5410')"),
-      MinAmount: z.number().optional().describe("Minimum transaction amount"),
-      MaxAmount: z.number().optional().describe("Maximum transaction amount"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/Transaction", args);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-];
+  });
+
+  return [chartOfAccountsTool, voucherTool, financialReportTool].filter(
+    (t): t is WintTool => t !== null,
+  );
+}

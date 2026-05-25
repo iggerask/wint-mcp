@@ -1,92 +1,61 @@
 import { z } from "zod";
 import { wintClient } from "../auth/client.js";
-import { WintTool, paginationSchema, formatResult, formatError } from "./types.js";
+import { WintTool, defineDomainTool, mergeListParams } from "./types.js";
 import { sanitizePathParam } from "../security.js";
 
-export const customerTools: WintTool[] = [
-  {
-    name: "customer_list",
-    description: "List all customers with pagination. Returns customer name, org number, contact info, and status.",
-    schema: {
-      ...paginationSchema,
+export function customerTools(): WintTool[] {
+  const tool = defineDomainTool({
+    name: "wint_customer",
+    summary: "Manage customers (invoicing counterparties): list, get, create, update, search.",
+    modes: [
+      {
+        name: "list",
+        description: "List customers with pagination. Returns name, org number, contact info, status.",
+        handler: async (args) => wintClient.get("/api/Customer", mergeListParams(args)),
+      },
+      {
+        name: "get",
+        description: "Get a single customer by id (integer).",
+        required: ["id"],
+        handler: async (args) => wintClient.get(`/api/Customer/${sanitizePathParam(args.id)}`),
+      },
+      {
+        name: "create",
+        description:
+          "Create a customer. Required: data → {Name, Type ('Company'|'Private'), BillingAddress: {Street1, ZipCode, City, CountryCode}}. Optional: OrgNumber, EmailAddress, PhoneNumber, PaymentTerms, Language.",
+        required: ["data"],
+        handler: async (args) => wintClient.post("/api/Customer", args.data),
+      },
+      {
+        name: "update",
+        description: "Update a customer. Required: id, data (full customer object).",
+        required: ["id", "data"],
+        handler: async (args) => wintClient.put(`/api/Customer/${sanitizePathParam(args.id)}`, args.data),
+      },
+      {
+        name: "search",
+        description:
+          "Search customers. Required: query (string). Optional: searchType ('name'|'orgNr'|'general', default 'general').",
+        required: ["query"],
+        handler: async (args) => {
+          const searchType = args.searchType ?? "general";
+          if (searchType === "name") {
+            return wintClient.get("/api/Customer/SearchByName", { searchString: args.query });
+          }
+          if (searchType === "orgNr") {
+            return wintClient.get("/api/Customer/SearchByOrgNr", { searchString: args.query });
+          }
+          return wintClient.get("/api/Customer/Search", { SearchName: args.query });
+        },
+      },
+    ],
+    extraSchema: {
+      query: z.string().optional().describe("For mode=search: search term."),
+      searchType: z
+        .enum(["name", "orgNr", "general"])
+        .optional()
+        .describe("For mode=search: search type (default 'general')."),
     },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/Customer", args);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "customer_get",
-    description: "Get full details of a specific customer by ID.",
-    schema: {
-      id: z.number().describe("Customer ID"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get(`/api/Customer/${sanitizePathParam(args.id)}`);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "customer_create",
-    description: "Create a new customer. Provide a customer object with Name (required), Type (required, e.g. 'Company' or 'Private'), BillingAddress (required object: {Street1, ZipCode, City (required), CountryCode}), and optionally OrgNumber, EmailAddress, PhoneNumber, PaymentTerms, Language.",
-    schema: {
-      customer: z.record(z.string(), z.any()).describe("Customer object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/Customer", args.customer);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "customer_update",
-    description: "Update an existing customer. Provide the full customer object with all fields.",
-    schema: {
-      id: z.number().describe("Customer ID"),
-      customer: z.record(z.string(), z.any()).describe("Updated customer object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.put(`/api/Customer/${sanitizePathParam(args.id)}`, args.customer);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "customer_search",
-    description: "Search for customers by name, org number, or general search term.",
-    schema: {
-      query: z.string().describe("Search term (name, org nr, etc.)"),
-      searchType: z.enum(["name", "orgNr", "general"]).optional().describe("Search type (default: general)"),
-    },
-    handler: async (args) => {
-      try {
-        const searchType = args.searchType ?? "general";
-        let result;
-        if (searchType === "name") {
-          result = await wintClient.get("/api/Customer/SearchByName", { searchString: args.query });
-        } else if (searchType === "orgNr") {
-          result = await wintClient.get("/api/Customer/SearchByOrgNr", { searchString: args.query });
-        } else {
-          result = await wintClient.get("/api/Customer/Search", { SearchName: args.query });
-        }
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-];
+  });
+  return tool ? [tool] : [];
+}

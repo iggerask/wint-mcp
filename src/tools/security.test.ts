@@ -26,72 +26,123 @@ const TRAVERSAL_PAYLOADS = [
   "123;rm -rf /",
 ];
 
-describe("cross-cutting security: path traversal in all tools", () => {
+/**
+ * Per-tool/mode test cases that exercise sanitizePathParam.
+ * Each entry produces args where the traversal payload is interpolated into a path param.
+ */
+const PATH_TRAVERSAL_CASES: Array<{ tool: string; description: string; buildArgs: (payload: string) => Record<string, any> }> = [
+  // wint_invoice
+  { tool: "wint_invoice", description: "mode=get id", buildArgs: (p) => ({ mode: "get", id: p }) },
+  { tool: "wint_invoice", description: "mode=delete id", buildArgs: (p) => ({ mode: "delete", id: p }) },
+  // wint_incoming_invoice
+  { tool: "wint_incoming_invoice", description: "mode=get id", buildArgs: (p) => ({ mode: "get", id: p }) },
+  { tool: "wint_incoming_invoice", description: "mode=sign id", buildArgs: (p) => ({ mode: "sign", id: p }) },
+  { tool: "wint_incoming_invoice", description: "mode=certify id", buildArgs: (p) => ({ mode: "certify", id: p }) },
+  { tool: "wint_incoming_invoice", description: "mode=cancel id", buildArgs: (p) => ({ mode: "cancel", id: p }) },
+  { tool: "wint_incoming_invoice", description: "mode=supplier_get id", buildArgs: (p) => ({ mode: "supplier_get", id: p }) },
+  // wint_customer
+  { tool: "wint_customer", description: "mode=get id", buildArgs: (p) => ({ mode: "get", id: p }) },
+  // wint_receipt
+  { tool: "wint_receipt", description: "mode=get id", buildArgs: (p) => ({ mode: "get", id: p }) },
+  { tool: "wint_receipt", description: "mode=sign id", buildArgs: (p) => ({ mode: "sign", id: p }) },
+  {
+    tool: "wint_receipt",
+    description: "mode=upload_image id",
+    buildArgs: (p) => ({
+      mode: "upload_image",
+      id: p,
+      base64Content: "aGVsbG8=",
+      contentType: "image/png",
+      fileName: "test.png",
+    }),
+  },
+  // wint_quotation
+  { tool: "wint_quotation", description: "mode=get id", buildArgs: (p) => ({ mode: "get", id: p }) },
+  // wint_chart_of_accounts
+  {
+    tool: "wint_chart_of_accounts",
+    description: "mode=account_balance account",
+    buildArgs: (p) => ({ mode: "account_balance", account: p }),
+  },
+  // wint_voucher
+  { tool: "wint_voucher", description: "mode=get id", buildArgs: (p) => ({ mode: "get", id: p }) },
+  // wint_salary
+  {
+    tool: "wint_salary",
+    description: "mode=payslip personId",
+    buildArgs: (p) => ({ mode: "payslip", personId: p, yearMonth: 202501 }),
+  },
+  {
+    tool: "wint_salary",
+    description: "mode=payslip yearMonth",
+    buildArgs: (p) => ({ mode: "payslip", personId: 1, yearMonth: p }),
+  },
+  {
+    tool: "wint_salary",
+    description: "mode=deviation_list yearMonth",
+    buildArgs: (p) => ({ mode: "deviation_list", yearMonth: p }),
+  },
+  // wint_time_reporting
+  {
+    tool: "wint_time_reporting",
+    description: "mode=project_get id",
+    buildArgs: (p) => ({ mode: "project_get", id: p }),
+  },
+  // wint_company
+  { tool: "wint_company", description: "mode=get id", buildArgs: (p) => ({ mode: "get", id: p }) },
+  {
+    tool: "wint_company",
+    description: "mode=employee_get id",
+    buildArgs: (p) => ({ mode: "employee_get", id: p }),
+  },
+  // wint_todo
+  { tool: "wint_todo", description: "mode=snooze id", buildArgs: (p) => ({ mode: "snooze", id: p }) },
+  // wint_supplier_rule
+  {
+    tool: "wint_supplier_rule",
+    description: "mode=list supplierId",
+    buildArgs: (p) => ({ mode: "list", supplierId: p }),
+  },
+  {
+    tool: "wint_supplier_rule",
+    description: "mode=get supplierId",
+    buildArgs: (p) => ({ mode: "get", supplierId: p, id: 1 }),
+  },
+  // wint_wintcard_rule
+  { tool: "wint_wintcard_rule", description: "mode=get id", buildArgs: (p) => ({ mode: "get", id: p }) },
+  {
+    tool: "wint_wintcard_rule",
+    description: "mode=delete id",
+    buildArgs: (p) => ({ mode: "delete", id: p }),
+  },
+  {
+    tool: "wint_wintcard_rule",
+    description: "mode=activate id",
+    buildArgs: (p) => ({ mode: "activate", id: p }),
+  },
+  {
+    tool: "wint_wintcard_rule",
+    description: "mode=deactivate id",
+    buildArgs: (p) => ({ mode: "deactivate", id: p }),
+  },
+];
+
+describe("cross-cutting security: path traversal", () => {
   const tools = getAllTools();
+  const toolByName = new Map(tools.map((t) => [t.name, t]));
 
-  // Find tools that have an 'id' parameter in their schema
-  const toolsWithId = tools.filter(
-    (t) => t.schema.id && t.name !== "wint_api_call"
-  );
+  for (const testCase of PATH_TRAVERSAL_CASES) {
+    const tool = toolByName.get(testCase.tool);
+    if (!tool) continue;
 
-  for (const tool of toolsWithId) {
-    describe(tool.name, () => {
+    describe(`${testCase.tool} (${testCase.description})`, () => {
       for (const payload of TRAVERSAL_PAYLOADS) {
-        it(`rejects malicious id: ${payload.slice(0, 30)}`, async () => {
-          const result = await tool.handler({ id: payload });
+        it(`rejects malicious value: ${payload.slice(0, 30)}`, async () => {
+          const result = await tool.handler(testCase.buildArgs(payload));
           expect(result.isError).toBe(true);
           expect(result.content[0].text).toContain("Invalid path parameter");
         });
       }
-    });
-  }
-
-  // Test receiptId param in receipt_upload_image
-  const uploadImageTool = tools.find((t) => t.name === "receipt_upload_image");
-  if (uploadImageTool) {
-    describe("receipt_upload_image (receiptId param)", () => {
-      for (const payload of TRAVERSAL_PAYLOADS) {
-        it(`rejects malicious receiptId: ${payload.slice(0, 30)}`, async () => {
-          const result = await uploadImageTool.handler({
-            receiptId: payload,
-            base64Content: "aGVsbG8=",
-            contentType: "image/png",
-            fileName: "test.png",
-          });
-          expect(result.isError).toBe(true);
-          expect(result.content[0].text).toContain("Invalid path parameter");
-        });
-      }
-    });
-  }
-
-  // Test yearMonth param in salary_deviation_list
-  const salaryTool = tools.find((t) => t.name === "salary_deviation_list");
-  if (salaryTool) {
-    describe("salary_deviation_list (yearMonth param)", () => {
-      for (const payload of TRAVERSAL_PAYLOADS) {
-        it(`rejects malicious yearMonth: ${payload.slice(0, 30)}`, async () => {
-          const result = await salaryTool.handler({ yearMonth: payload });
-          expect(result.isError).toBe(true);
-          expect(result.content[0].text).toContain("Invalid path parameter");
-        });
-      }
-    });
-  }
-
-  // Test account param in account_balance
-  const accountTool = tools.find((t) => t.name === "account_balance");
-  if (accountTool) {
-    describe("account_balance (account param)", () => {
-      it("accepts a numeric account", async () => {
-        const result = await accountTool.handler({ account: 1930 });
-        expect(result.isError).toBeUndefined();
-      });
-
-      it("rejects traversal in account", async () => {
-        const result = await accountTool.handler({ account: "../1930" });
-        expect(result.isError).toBe(true);
-      });
     });
   }
 });
@@ -135,7 +186,6 @@ describe("cross-cutting security: error sanitization", () => {
     const result = formatError(error);
     const parsed = JSON.parse(result.content[0].text);
 
-    // Should only have error, status, message, details — not raw data blob
     expect(parsed.SensitiveField).toBeUndefined();
     expect(parsed.DebugInfo).toBeUndefined();
     expect(parsed.message).toBe("Bad request");
