@@ -1,5 +1,6 @@
 import { WintTool } from "./types.js";
 import { fallbackTool } from "./fallback.js";
+import { endpointLookupTool } from "./endpoint-lookup.js";
 import { invoicingTools } from "./invoicing.js";
 import { incomingInvoiceTools } from "./incoming-invoices.js";
 import { customerTools } from "./customers.js";
@@ -13,7 +14,8 @@ import { todoTools } from "./todos.js";
 import { articleTools } from "./articles.js";
 import { automationTools } from "./automations.js";
 
-const moduleMap: Record<string, WintTool[]> = {
+// Each value is a factory so env vars (WINT_TOOL_MODES) are re-evaluated on every call.
+const moduleMap: Record<string, () => WintTool[]> = {
   invoicing: invoicingTools,
   "incoming-invoices": incomingInvoiceTools,
   customers: customerTools,
@@ -34,11 +36,12 @@ export function getAllTools(): WintTool[] {
   const envModules = process.env.WINT_MODULES;
 
   if (!envModules || envModules.trim() === "") {
-    return [...Object.values(moduleMap).flat(), fallbackTool];
+    const tools = Object.values(moduleMap).flatMap((fn) => fn());
+    return [...tools, endpointLookupTool, fallbackTool];
   }
 
   const requested = envModules.split(",").map((s) => s.trim());
-  const tools = requested.flatMap((key) => moduleMap[key] ?? []);
+  const tools = requested.flatMap((key) => moduleMap[key]?.() ?? []);
 
-  return [...tools, fallbackTool];
+  return [...tools, endpointLookupTool, fallbackTool];
 }

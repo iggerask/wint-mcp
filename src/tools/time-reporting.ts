@@ -1,67 +1,39 @@
-import { z } from "zod";
 import { wintClient } from "../auth/client.js";
-import { WintTool, formatResult, formatError } from "./types.js";
+import { WintTool, defineDomainTool } from "./types.js";
 import { sanitizePathParam } from "../security.js";
 
-export const timeReportingTools: WintTool[] = [
-  {
-    name: "time_report_list",
-    description: "List time reports with optional filtering by date range, person, or project.",
-    schema: {
-      StartDate: z.string().optional().describe("Start date (ISO 8601, e.g. 2025-12-01)"),
-      EndDate: z.string().optional().describe("End date (ISO 8601, e.g. 2026-02-28)"),
-      EmployeeId: z.number().optional().describe("Filter by employee ID (integer)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/TimeReport/Filter", args);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "time_report_create",
-    description: "Create/merge time report entries. Provide timeReport object with EmployeeId (integer), Projects (array of available project objects), and Weeks (array of week objects containing time entries). This is a complex nested structure — fetch an existing time report first via time_report_list to see the expected format.",
-    schema: {
-      timeReport: z.record(z.string(), z.any()).describe("Time report object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/TimeReport/MergeTimeReport", args.timeReport);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "time_project_list",
-    description: "List time reporting projects. Returns project name, manager, status, and budget info.",
-    schema: {},
-    handler: async () => {
-      try {
-        const result = await wintClient.get("/api/TimeReportingProject/Report");
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "time_project_get",
-    description: "Get full details of a specific time reporting project by ID.",
-    schema: {
-      id: z.string().describe("Project ID (GUID)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get(`/api/TimeReportingProject/${sanitizePathParam(args.id)}`);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-];
+export function timeReportingTools(): WintTool[] {
+  const tool = defineDomainTool({
+    name: "wint_time_reporting",
+    summary: "Time reports and projects: report_list, report_create, project_list, project_get.",
+    modes: [
+      {
+        name: "report_list",
+        description:
+          "List time reports. Optional filters → {StartDate, EndDate (ISO 8601), EmployeeId (integer)}.",
+        handler: async (args) => wintClient.get("/api/TimeReport/Filter", args.filters ?? {}),
+      },
+      {
+        name: "report_create",
+        description:
+          "Create/merge time report entries. Required: data → {EmployeeId, Projects: [...], Weeks: [...]}. Complex nested structure — fetch an existing time report first via mode=report_list to see the expected format.",
+        required: ["data"],
+        handler: async (args) => wintClient.post("/api/TimeReport/MergeTimeReport", args.data),
+      },
+      {
+        name: "project_list",
+        description: "List time reporting projects. No params. Returns name, manager, status, budget.",
+        handler: async () => wintClient.get("/api/TimeReportingProject/Report"),
+      },
+      {
+        name: "project_get",
+        description: "Get a single time reporting project. Required: id (GUID).",
+        required: ["id"],
+        handler: async (args) =>
+          wintClient.get(`/api/TimeReportingProject/${sanitizePathParam(args.id)}`),
+      },
+    ],
+    includePagination: false,
+  });
+  return tool ? [tool] : [];
+}

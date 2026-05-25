@@ -1,51 +1,35 @@
 import { z } from "zod";
 import { wintClient } from "../auth/client.js";
-import { WintTool, paginationSchema, formatResult, formatError } from "./types.js";
+import { WintTool, defineDomainTool, mergeListParams } from "./types.js";
 
-export const articleTools: WintTool[] = [
-  {
-    name: "article_list",
-    description: "List all articles/products. Returns article number, name, price, VAT, and unit.",
-    schema: {
-      ...paginationSchema,
+export function articleTools(): WintTool[] {
+  const tool = defineDomainTool({
+    name: "wint_article",
+    summary: "Manage articles/products: list, create, search.",
+    modes: [
+      {
+        name: "list",
+        description: "List articles with pagination. Returns article number, name, price, VAT, unit.",
+        handler: async (args) => wintClient.get("/api/Article", mergeListParams(args)),
+      },
+      {
+        name: "create",
+        description:
+          "Create an article. Required: data → {Text (name/description), UnitPrice, Vat (0|6|12|25)}. Optional in data: UnitId.",
+        required: ["data"],
+        handler: async (args) => wintClient.post("/api/Article", args.data),
+      },
+      {
+        name: "search",
+        description: "Search articles by name. Required: searchName.",
+        required: ["searchName"],
+        handler: async (args) =>
+          wintClient.get("/api/Article/SearchByName", { searchName: args.searchName }),
+      },
+    ],
+    extraSchema: {
+      searchName: z.string().optional().describe("For mode=search: article name to search."),
     },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/Article", args);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "article_create",
-    description: "Create a new article/product. Provide article object with Text (required, article name/description), UnitPrice (required, price per unit), Vat (required, percentage integer: 0, 6, 12, or 25), and optionally UnitId (integer).",
-    schema: {
-      article: z.record(z.string(), z.any()).describe("Article object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/Article", args.article);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "article_search",
-    description: "Search for articles by name.",
-    schema: {
-      searchName: z.string().describe("Article name to search for"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/Article/SearchByName", { searchName: args.searchName });
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-];
+  });
+  return tool ? [tool] : [];
+}

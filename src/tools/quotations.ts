@@ -1,83 +1,45 @@
-import { z } from "zod";
 import { wintClient } from "../auth/client.js";
-import { WintTool, paginationSchema, formatResult, formatError } from "./types.js";
+import { WintTool, defineDomainTool, mergeListParams } from "./types.js";
 import { sanitizePathParam } from "../security.js";
 
-export const quotationTools: WintTool[] = [
-  {
-    name: "quotation_list",
-    description: "List quotations/quotes with pagination. Returns quotation status, customer, amounts, and dates.",
-    schema: {
-      ...paginationSchema,
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get("/api/Quotation", args);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "quotation_get",
-    description: "Get full details of a specific quotation by ID, including line items and customer info.",
-    schema: {
-      id: z.number().describe("Quotation ID (integer)"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.get(`/api/Quotation/${sanitizePathParam(args.id)}`);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "quotation_create",
-    description: "Create a new quotation. Provide quotation object with CustomerId, Date, EndDate, Currency, Language, PdfTemplate, and Rows (array of {ArticleId, Description, Quantity, Price, VAT}). Optional: ContactPerson, CustomerReference, Notes.",
-    schema: {
-      quotation: z.record(z.string(), z.any()).describe("Quotation object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/Quotation", args.quotation);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "quotation_update",
-    description: "Update an existing quotation.",
-    schema: {
-      id: z.number().describe("Quotation serial number (integer)"),
-      quotation: z.record(z.string(), z.any()).describe("Updated quotation object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.put(`/api/Quotation/edit/${sanitizePathParam(args.id)}`, args.quotation);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-  {
-    name: "quotation_send",
-    description: "Send a quotation to the customer via email. Provide mailOptions with SerialNumber (integer, required), MailSubject (required), MailToType (required, e.g. 'CustomerMail'), and optionally MailToAddresses, MailMessage, MailFrom.",
-    schema: {
-      mailOptions: z.record(z.string(), z.any()).describe("Mail options object"),
-    },
-    handler: async (args) => {
-      try {
-        const result = await wintClient.post("/api/Quotation/mail", args.mailOptions);
-        return formatResult(result);
-      } catch (error) {
-        return formatError(error);
-      }
-    },
-  },
-];
+export function quotationTools(): WintTool[] {
+  const tool = defineDomainTool({
+    name: "wint_quotation",
+    summary: "Manage quotations/quotes: list, get, create, update, send.",
+    modes: [
+      {
+        name: "list",
+        description: "List quotations with pagination.",
+        handler: async (args) => wintClient.get("/api/Quotation", mergeListParams(args)),
+      },
+      {
+        name: "get",
+        description: "Get a single quotation by id.",
+        required: ["id"],
+        handler: async (args) => wintClient.get(`/api/Quotation/${sanitizePathParam(args.id)}`),
+      },
+      {
+        name: "create",
+        description:
+          "Create a quotation. Required: data → {CustomerId, Date, EndDate, Currency, Language, PdfTemplate, Rows: [{ArticleId, Description, Quantity, Price, VAT}, ...]}. Optional in data: ContactPerson, CustomerReference, Notes.",
+        required: ["data"],
+        handler: async (args) => wintClient.post("/api/Quotation", args.data),
+      },
+      {
+        name: "update",
+        description: "Update a quotation. Required: id (serial number), data.",
+        required: ["id", "data"],
+        handler: async (args) =>
+          wintClient.put(`/api/Quotation/edit/${sanitizePathParam(args.id)}`, args.data),
+      },
+      {
+        name: "send",
+        description:
+          "Send a quotation by email. Required: options → {SerialNumber, MailSubject, MailToType (e.g. 'CustomerMail'), MailToAddresses?, MailMessage?, MailFrom?}.",
+        required: ["options"],
+        handler: async (args) => wintClient.post("/api/Quotation/mail", args.options),
+      },
+    ],
+  });
+  return tool ? [tool] : [];
+}
